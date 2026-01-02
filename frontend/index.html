@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>NeuroNetComplete</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 40px; }
+      .container { max-width: 900px; margin: auto; }
+      .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+      button { padding: 10px 16px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>NeuroNetComplete — AI NFT Network</h1>
+      <div class="card">
+        <h3>Connect Wallet</h3>
+        <button id="btnConnect">Connect MetaMask</button>
+        <div id="address"></div>
+      </div>
+
+      <div class="card">
+        <h3>Mint AI NFT</h3>
+        <input id="name" placeholder="AI Name" /> <br/><br/>
+        <textarea id="desc" placeholder="Short description"></textarea><br/><br/>
+        <button id="btnMint">Mint</button>
+        <div id="mintResult"></div>
+      </div>
+
+    </div>
+
+    <script>
+      const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      let signer;
+      document.getElementById('btnConnect').onclick = async () => {
+        await provider.send('eth_requestAccounts', []);
+        signer = provider.getSigner();
+        const addr = await signer.getAddress();
+        document.getElementById('address').innerText = 'Connected: ' + addr;
+      }
+
+      document.getElementById('btnMint').onclick = async () => {
+        const name = document.getElementById('name').value;
+        const desc = document.getElementById('desc').value;
+        const addr = signer ? await signer.getAddress() : null;
+        if (!addr) { alert('Connect wallet first'); return; }
+        const resp = await fetch('/mint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner_address: addr, name: name, description: desc })
+        });
+        const data = await resp.json();
+        document.getElementById('mintResult').innerText = JSON.stringify(data, null, 2);
+      }
+    </script>
+  </body>
+</html>
