@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Train AI{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1><i class="fas fa-robot"></i> Train Your AI NFT</h1>
+    <p class="subtitle">Chat with your NFT to improve its intelligence and earn rewards</p>
+    
+    <div id="walletRequired" class="alert alert-warning" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        Please <a href="#" onclick="openWalletModal()">connect your wallet</a> to train NFTs.
+    </div>
+    
+    <div id="trainInterface" style="display: none;">
+        <div class="train-layout">
+            <div class="nft-selector">
+                <h3><i class="fas fa-list"></i> Select NFT</h3>
+                <div id="nftList">
+                    <p class="text-muted">Loading your NFTs...</p>
+                </div>
+            </div>
+            
+            <div class="chat-interface">
+                <div class="chat-header">
+                    <h3><i class="fas fa-comments"></i> Training Chat</h3>
+                    <div class="cooldown-info">
+                        <span>Cooldown:</span>
+                        <span id="cooldownTimer">Ready</span>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-sender">NeuroNet AI</div>
+                        <div class="message-text">Select an NFT and start chatting to train it! Each message improves the neural network.</div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Type your training message here..." disabled>
+                    <button id="sendBtn" class="btn btn-primary" disabled>
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
+                
+                <div class="training-stats">
+                    <div class="stat">
+                        <span>Next Reward:</span>
+                        <span id="nextReward">0.00 NN</span>
+                    </div>
+                    <div class="stat">
+                        <span>Current NFT:</span>
+                        <span id="currentNFT">None selected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nft-stats-container">
+            <div class="card">
+                <h3><i class="fas fa-chart-line"></i> NFT Statistics</h3>
+                <div id="nftStats">
+                    <p class="text-muted">Select an NFT to see statistics</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-history"></i> Recent Training</h3>
+                <div id="trainingHistory">
+                    <p class="text-muted">No training history yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedNFT = null;
+let trainingCooldown = false;
+let cooldownEnd = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkWalletForTraining();
+    setupChat();
+    
+    // Update cooldown timer every second
+    setInterval(updateCooldownTimer, 1000);
+});
+
+function checkWalletForTraining() {
+    const walletRequired = document.getElementById('walletRequired');
+    const trainInterface = document.getElementById('trainInterface');
+    
+    if (currentWallet) {
+        walletRequired.style.display = 'none';
+        trainInterface.style.display = 'block';
+        loadUserNFTsForTraining();
+    } else {
+        walletRequired.style.display = 'block';
+        trainInterface.style.display = 'none';
+    }
+}
+
+function setupChat() {
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !trainingCooldown) {
+            sendTrainingMessage();
+        }
+    });
+    
+    sendBtn.addEventListener('click', sendTrainingMessage);
+}
+
+async function loadUserNFTsForTraining() {
+    try {
+        const response = await fetch('/api/get-nfts');
+        const data = await response.json();
+        
+        const nftList = document.getElementById('nftList');
+        
+        if (data.nfts && data.nfts.length > 0) {
+            nftList.innerHTML = '';
+            
+            data.nfts.forEach(nft => {
+                const nftElement = document.createElement('div');
+                nftElement.className = 'nft-option';
+                nftElement.innerHTML = `
+                    <div class="nft-option-header">
+                        <h4>${nft.name}</h4>
+                        <span class="nft-value">${nft.value} NN</span>
+                    </div>
+                    <div class="nft-option-details">
+                        <span>Intelligence: ${nft.intelligence}</span>
+                        <span>Difficulty: ${nft.difficulty}</span>
+                    </div>
+                `;
+                
+                nftElement.addEventListener('click', () => selectNFTForTraining(nft));
+                nftList.appendChild(nftElement);
+            });
+            
+            // Select first NFT by default
+            selectNFTForTraining(data.nfts[0]);
+        } else {
+            nftList.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    You have no NFTs. <a href="/mint">Mint one first!</a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading NFTs:', error);
+        document.getElementById('nftList').innerHTML = '<p class="text-muted">Error loading NFTs</p>';
+    }
+}
+
+function selectNFTForTraining(nft) {
+    selectedNFT = nft;
+    
+    // Highlight selected
+    document.querySelectorAll('.nft-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+    
+    // Update UI
+    document.getElementById('currentNFT').textContent = nft.name;
+    updateNFTStats(nft);
+    updateTrainingHistory(nft);
+    updateRewardEstimate(nft);
+    
+    // Enable chat
+    document.getElementById('chatInput').disabled = false;
+    document.getElementById('sendBtn').disabled = false;
+    
+    // Add message
+    addChatMessage('bot', `Selected NFT: ${nft.name}. Ready for training!`);
+}
+
+function updateNFTStats(nft) {
+    const statsDiv = document.getElementById('nftStats');
+    statsDiv.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Value</div>
+                <div class="stat-value">${nft.value} NN</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Intelligence</div>
+                <div class="stat-value">${nft.intelligence}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Difficulty</div>
+                <div class="stat-value">${nft.difficulty}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Trained</div>
+                <div class="stat-value">${nft.last_train ? formatTime(nft.last_train) : 'Never'}</div>
+            </div>
+        </div>
+    `;
+}
+
+function updateTrainingHistory(nft) {
+    const historyDiv = document.getElementById('trainingHistory');
+    
+    if (nft.training_history && nft.training_history.length > 0) {
+        let html = '<div class="history-list">';
+        
+        nft.training_history.slice(-5).reverse().forEach(training => {
+            const message = training.message.length > 20 ? training.message.substring(0, 20) + '...' : training.message;
+            html += `
+                <div class="history-item">
+                    <div class="history-message">"${message}"</div>
+                    <div class="history-details">
+                        <span>+${training.value_increase} NN</span>
+                        <span>${formatTime(training.timestamp)}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        historyDiv.innerHTML = html;
+    } else {
+        historyDiv.innerHTML = '<p class="text-muted">No training history yet</p>';
+    }
+}
+
+function updateRewardEstimate(nft) {
+    const reward = 0.1 + (nft.difficulty * 0.05) + (nft.intelligence * 0.01);
+    document.getElementById('nextReward').textContent = reward.toFixed(2) + ' NN';
+}
+
+function addChatMessage(sender, text) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}`;
+    messageDiv.innerHTML = `
+        <div class="message-sender">${sender === 'user' ? 'You' : 'NeuroNet AI'}</div>
+        <div class="message-text">${text}</div>
+    `;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendTrainingMessage() {
+    if (!selectedNFT || trainingCooldown) {
+        return;
+    }
+    
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+    
+    if (!message) {
+        showNotification('Please enter a message', 'error');
+        return;
+    }
+    
+    // Add user message
+    addChatMessage('user', message);
+    
+    // Clear input
+    chatInput.value = '';
+    
+    try {
+        const response = await fetch('/api/train-nft', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nft_id: selectedNFT.id,
+                message: message
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Add AI response
+            const rewardMsg = `Training successful! Value: ${data.nft.value} NN (+${data.training_result.value_increase}). Reward: ${data.reward} NN`;
+            addChatMessage('bot', rewardMsg);
+            
+            // Set cooldown (30 seconds)
+            trainingCooldown = true;
+            cooldownEnd = Date.now() + 30000;
+            
+            // Update NFT data
+            selectedNFT = data.nft;
+            updateNFTStats(data.nft);
+            updateTrainingHistory(data.nft);
+            updateRewardEstimate(data.nft);
+            
+            showNotification(`Training successful! Earned ${data.reward} NN`, 'success');
+            updateNetworkStats();
+        } else {
+            addChatMessage('bot', `Training failed: ${data.error}`);
+            showNotification(data.error, 'error');
+        }
+    } catch (error) {
+        addChatMessage('bot', `Error: ${error.message}`);
+        showNotification('Training error', 'error');
+    }
+}
+
+function updateCooldownTimer() {
+    if (!trainingCooldown) {
+        document.getElementById('cooldownTimer').textContent = 'Ready';
+        return;
+    }
+    
+    const now = Date.now();
+    const remaining = cooldownEnd - now;
+    
+    if (remaining <= 0) {
+        trainingCooldown = false;
+        document.getElementById('cooldownTimer').textContent = 'Ready';
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+    } else {
+        const seconds = Math.ceil(remaining / 1000);
+        document.getElementById('cooldownTimer').textContent = `${seconds}s`;
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+    }
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+</script>
+
+<style>
+.train-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.nft-selector {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.nft-option {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+}
+
+.nft-option:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.nft-option.selected {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.8);
+}
+
+.nft-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.nft-option-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.nft-option-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.chat-interface {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.cooldown-info {
+    background: rgba(0,0,0,0.3);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 300px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.message.user {
+    background: rgba(102, 126, 234, 0.2);
+    margin-left: 20px;
+}
+
+.message.bot {
+    background: rgba(108, 117, 125, 0.2);
+    margin-right: 20px;
+}
+
+.message-sender {
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: var(--gray);
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: white;
+}
+
+.training-stats {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.nft-stats-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.stat-card {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 5px;
+}
+
+.history-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.history-message {
+    font-style: italic;
+    margin-bottom: 5px;
+    color: rgba(255,255,255,0.9);
+}
+
+.history-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--gray);
+}
+</style>
+{% endblock %}

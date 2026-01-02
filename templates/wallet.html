@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Wallet{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1><i class="fas fa-wallet"></i> My Wallet</h1>
+    
+    <div id="walletInfo" class="wallet-info-section">
+        <p class="text-muted">Connect wallet to view information...</p>
+    </div>
+</div>
+
+<div class="content-grid">
+    <div class="card">
+        <h2><i class="fas fa-coins"></i> Balance & Transactions</h2>
+        <div id="balanceSection">
+            <p class="text-muted">Wallet not connected</p>
+        </div>
+        
+        <div class="wallet-actions">
+            <button class="btn btn-secondary" onclick="openWalletModal()">
+                <i class="fas fa-exchange-alt"></i> Switch Wallet
+            </button>
+            <button class="btn btn-secondary" onclick="exportWallet()">
+                <i class="fas fa-download"></i> Export Wallet
+            </button>
+            <button class="btn btn-danger" onclick="disconnectWallet()">
+                <i class="fas fa-sign-out-alt"></i> Disconnect
+            </button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2><i class="fas fa-robot"></i> My AI NFTs</h2>
+        <div id="myNFTsSection">
+            <p class="text-muted">No NFTs found</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-history"></i> Transaction History</h2>
+    <div id="transactionHistory">
+        <p class="text-muted">Connect wallet to see transactions</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadWalletData();
+});
+
+async function loadWalletData() {
+    if (!currentWallet) {
+        document.getElementById('walletInfo').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Wallet not connected. Please <a href="#" onclick="openWalletModal()">connect a wallet</a>.
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        // Load wallet info
+        const response = await fetch('/api/wallet-info');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update wallet info
+            document.getElementById('walletInfo').innerHTML = `
+                <div class="wallet-details">
+                    <div class="detail-row">
+                        <span>Address:</span>
+                        <code class="wallet-address">${data.address}</code>
+                    </div>
+                    <div class="detail-row">
+                        <span>Balance:</span>
+                        <span class="balance-amount">${data.balance} NN</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>NFT Count:</span>
+                        <span>${data.nft_count}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Total NFT Value:</span>
+                        <span>${data.total_value} NN</span>
+                    </div>
+                </div>
+            `;
+            
+            // Update balance section
+            document.getElementById('balanceSection').innerHTML = `
+                <div class="balance-display">
+                    <div class="balance-main">
+                        <span class="balance-label">Available Balance:</span>
+                        <span class="balance-value">${data.balance} NN</span>
+                    </div>
+                    <div class="balance-secondary">
+                        <span>Staked: 0.00 NN</span>
+                        <span>Rewards: 0.00 NN</span>
+                    </div>
+                </div>
+            `;
+            
+            // Load NFTs
+            loadWalletNFTs(data.address);
+            
+            // Load transaction history
+            loadTransactionHistory(data.transactions || []);
+        }
+    } catch (error) {
+        console.error('Error loading wallet data:', error);
+    }
+}
+
+async function loadWalletNFTs(address) {
+    try {
+        const response = await fetch('/api/get-nfts');
+        const data = await response.json();
+        
+        const nftsSection = document.getElementById('myNFTsSection');
+        
+        if (data.nfts && data.nfts.length > 0) {
+            let html = '<div class="wallet-nfts-grid">';
+            
+            data.nfts.forEach(nft => {
+                html += `
+                    <div class="wallet-nft">
+                        <div class="wallet-nft-header">
+                            <h4>${nft.name}</h4>
+                            <span class="nft-value">${nft.value} NN</span>
+                        </div>
+                        <div class="wallet-nft-body">
+                            <div class="nft-stat">
+                                <span>ID:</span>
+                                <span class="nft-id">${nft.id.substring(0, 8)}...</span>
+                            </div>
+                            <div class="nft-stat">
+                                <span>Intelligence:</span>
+                                <span>${nft.intelligence}</span>
+                            </div>
+                            <div class="nft-stat">
+                                <span>Difficulty:</span>
+                                <span>${nft.difficulty}</span>
+                            </div>
+                            <div class="nft-actions">
+                                <button onclick="location.href='/train'" class="btn btn-primary">
+                                    <i class="fas fa-robot"></i> Train
+                                </button>
+                                <button onclick="transferNFT('${nft.id}')" class="btn btn-secondary">
+                                    <i class="fas fa-exchange-alt"></i> Transfer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            nftsSection.innerHTML = html;
+        } else {
+            nftsSection.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    You don't have any NFTs. <a href="/mint">Mint your first NFT!</a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading wallet NFTs:', error);
+        document.getElementById('myNFTsSection').innerHTML = '<p class="text-muted">Error loading NFTs</p>';
+    }
+}
+
+function loadTransactionHistory(transactions) {
+    const historyDiv = document.getElementById('transactionHistory');
+    
+    if (transactions.length > 0) {
+        let html = '<div class="transactions-list">';
+        
+        transactions.slice(-10).reverse().forEach(tx => {
+            const type = tx.type || 'unknown';
+            const isIncoming = tx.recipient === currentWallet;
+            const amount = tx.amount || tx.reward || 0;
+            
+            html += `
+                <div class="transaction-item ${isIncoming ? 'incoming' : 'outgoing'}">
+                    <div class="transaction-header">
+                        <span class="transaction-type">${type.replace('_', ' ')}</span>
+                        <span class="transaction-amount ${isIncoming ? 'positive' : 'negative'}">
+                            ${isIncoming ? '+' : '-'}${amount} NN
+                        </span>
+                    </div>
+                    <div class="transaction-details">
+                        ${type === 'nft_transfer' ? `
+                            <span>NFT: ${tx.nft_name || 'Unknown'}</span>
+                            <span>To: ${tx.recipient ? tx.recipient.substring(0, 10) + '...' : 'Unknown'}</span>
+                        ` : type === 'nft_train' ? `
+                            <span>Training: ${tx.message_preview || 'Message'}</span>
+                            <span>Reward: ${tx.reward || 0} NN</span>
+                        ` : type === 'nft_mint' ? `
+                            <span>Minted: ${tx.nft_name || 'NFT'}</span>
+                            <span>Cost: 1.0 NN</span>
+                        ` : `
+                            <span>Block: ${tx.block_hash || 'Pending'}</span>
+                            <span>${new Date(tx.timestamp * 1000).toLocaleTimeString()}</span>
+                        `}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        historyDiv.innerHTML = html;
+    } else {
+        historyDiv.innerHTML = '<p class="text-muted">No transactions yet</p>';
+    }
+}
+
+function exportWallet() {
+    const saved = localStorage.getItem('neuroWallet');
+    if (saved) {
+        try {
+            const blob = new Blob([saved], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'neuronet-wallet-backup.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Wallet exported successfully!', 'success');
+        } catch (e) {
+            showNotification('Export failed: ' + e.message, 'error');
+        }
+    } else {
+        showNotification('No wallet to export', 'warning');
+    }
+}
+
+function disconnectWallet() {
+    if (confirm('Are you sure you want to disconnect your wallet?')) {
+        localStorage.removeItem('neuroWallet');
+        currentWallet = null;
+        updateWalletStatus(null);
+        loadWalletData();
+        showNotification('Wallet disconnected', 'info');
+    }
+}
+
+function transferNFT(nftId) {
+    const address = prompt('Enter recipient wallet address (NN_...):');
+    if (!address || !address.startsWith('NN_')) {
+        showNotification('Invalid address format', 'error');
+        return;
+    }
+    
+    if (!confirm(`Transfer NFT to ${address.substring(0, 15)}...?`)) {
+        return;
+    }
+    
+    fetch('/api/transfer-nft', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            nft_id: nftId,
+            to_address: address
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('NFT transferred successfully!', 'success');
+            loadWalletData();
+        } else {
+            showNotification(data.error || 'Transfer failed', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Transfer error: ' + error.message, 'error');
+    });
+}
+</script>
+
+<style>
+.wallet-info-section {
+    padding: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.wallet-details {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.wallet-address {
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.5);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.balance-amount {
+    font-size: 24px;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.balance-display {
+    text-align: center;
+    padding: 20px;
+}
+
+.balance-main {
+    margin-bottom: 15px;
+}
+
+.balance-label {
+    display: block;
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 5px;
+}
+
+.balance-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.balance-secondary {
+    display: flex;
+    justify-content: space-around;
+    color: var(--gray);
+    font-size: 14px;
+}
+
+.wallet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.wallet-actions button {
+    flex: 1;
+}
+
+.wallet-nfts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.wallet-nft {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.wallet-nft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.wallet-nft-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.nft-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.nft-id {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.nft-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.nft-actions button {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+}
+
+.transactions-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.transaction-item {
+    background: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid transparent;
+}
+
+.transaction-item.incoming {
+    border-left-color: #28a745;
+}
+
+.transaction-item.outgoing {
+    border-left-color: #dc3545;
+}
+
+.transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.transaction-type {
+    text-transform: capitalize;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.transaction-amount {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.transaction-amount.positive {
+    color: #28a745;
+}
+
+.transaction-amount.negative {
+    color: #dc3545;
+}
+
+.transaction-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--gray);
+}
+</style>
+{% endblock %}

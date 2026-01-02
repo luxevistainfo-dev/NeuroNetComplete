@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroNet - {% block title %}AI Blockchain{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-brain"></i> NeuroNet
+            </a>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+                <a href="{{ url_for('wallet_page') }}"><i class="fas fa-wallet"></i> Wallet</a>
+                <a href="{{ url_for('mint_page') }}"><i class="fas fa-plus-circle"></i> Mint</a>
+                <a href="{{ url_for('train_page') }}"><i class="fas fa-robot"></i> Train</a>
+                <a href="{{ url_for('marketplace_page') }}"><i class="fas fa-store"></i> Market</a>
+            </div>
+            <div class="wallet-display" id="walletDisplay" onclick="openWalletModal()">
+                <i class="fas fa-user-circle"></i>
+                <span id="walletStatus">Not Connected</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>NeuroNet AI Blockchain &copy; 2024 - Where NFTs Learn and Grow</p>
+            <p class="footer-sub">Powered by Neural Networks and Blockchain Technology</p>
+        </div>
+    </footer>
+
+    <!-- Wallet Modal -->
+    <div id="walletModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeWalletModal()">&times;</span>
+            <h2><i class="fas fa-wallet"></i> Wallet Manager</h2>
+            
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="switchTab('create')">Create New</button>
+                <button class="tab-btn" onclick="switchTab('load')">Load Existing</button>
+            </div>
+            
+            <div id="createTab" class="tab-content active">
+                <p>Create a new wallet to start using NeuroNet:</p>
+                <button id="createWalletBtn" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Generate New Wallet
+                </button>
+                
+                <div id="newWalletInfo" class="hidden">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>SAVE YOUR PRIVATE KEY!</strong> This cannot be recovered if lost.
+                    </div>
+                    <div class="wallet-details">
+                        <div class="detail-row">
+                            <span>Address:</span>
+                            <code id="newAddress"></code>
+                        </div>
+                        <div class="detail-row">
+                            <span>Private Key:</span>
+                            <code id="newPrivateKey"></code>
+                        </div>
+                    </div>
+                    <button id="copyPrivateKeyBtn" class="btn btn-secondary">
+                        <i class="fas fa-copy"></i> Copy Private Key
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loadTab" class="tab-content">
+                <p>Load existing wallet using private key:</p>
+                <textarea id="privateKeyInput" placeholder="Enter your 64-character private key here..." rows="3"></textarea>
+                <button id="loadWalletBtn" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Load Wallet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

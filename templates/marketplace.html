@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1><i class="fas fa-store"></i> NFT Marketplace</h1>
+    <p class="subtitle">Coming Soon - Buy, sell and trade AI NFTs</p>
+    
+    <div class="marketplace-info">
+        <div class="info-card">
+            <i class="fas fa-tools"></i>
+            <h3>Under Development</h3>
+            <p>The marketplace is currently being built. Check back soon for trading features!</p>
+        </div>
+        
+        <div class="info-card">
+            <i class="fas fa-robot"></i>
+            <h3>Train & Earn</h3>
+            <p>In the meantime, train your NFTs to increase their value for future trading.</p>
+        </div>
+        
+        <div class="info-card">
+            <i class="fas fa-chart-line"></i>
+            <h3>Track Value</h3>
+            <p>Your NFTs gain value with each training session, preparing them for the marketplace.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-gem"></i> Top Valued NFTs</h2>
+    <div id="topNFTs">
+        <p class="text-muted">Loading top NFTs...</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-chart-bar"></i> Marketplace Stats</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-robot"></i></div>
+            <div class="stat-value" id="marketTotalNFTs">0</div>
+            <div class="stat-label">Total NFTs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-coins"></i></div>
+            <div class="stat-value" id="marketTotalValue">0</div>
+            <div class="stat-label">Total Value (NN)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-brain"></i></div>
+            <div class="stat-value" id="marketAvgIntelligence">0</div>
+            <div class="stat-label">Avg Intelligence</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-value" id="marketTotalOwners">0</div>
+            <div class="stat-label">Unique Owners</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-lightbulb"></i> Marketplace Features Coming</h2>
+    <div class="features-list">
+        <div class="feature">
+            <div class="feature-icon"><i class="fas fa-tag"></i></div>
+            <div class="feature-content">
+                <h3>NFT Listings</h3>
+                <p>List your trained NFTs for sale with custom prices</p>
+            </div>
+        </div>
+        <div class="feature">
+            <div class="feature-icon"><i class="fas fa-search-dollar"></i></div>
+            <div class="feature-content">
+                <h3>Bidding System</h3>
+                <p>Place bids on rare AI NFTs with high intelligence</p>
+            </div>
+        </div>
+        <div class="feature">
+            <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+            <div class="feature-content">
+                <h3>Market Analytics</h3>
+                <p>Track NFT values, trading volume, and trends</p>
+            </div>
+        </div>
+        <div class="feature">
+            <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="feature-content">
+                <h3>Secure Trading</h3>
+                <p>Blockchain-verified ownership transfers</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadMarketplaceData();
+});
+
+async function loadMarketplaceData() {
+    try {
+        // Load network stats
+        const statsResponse = await fetch('/api/network-stats');
+        const stats = await statsResponse.json();
+        
+        document.getElementById('marketTotalNFTs').textContent = stats.total_nfts;
+        document.getElementById('marketTotalValue').textContent = stats.total_value;
+        document.getElementById('marketAvgIntelligence').textContent = stats.average_intelligence;
+        
+        // Load all NFTs for top listings
+        const nftsResponse = await fetch('/api/get-all-nfts');
+        const nftsData = await nftsResponse.json();
+        
+        // Count unique owners
+        const owners = new Set(nftsData.nfts.map(nft => nft.owner));
+        document.getElementById('marketTotalOwners').textContent = owners.size;
+        
+        // Show top 6 NFTs by value
+        const topNFTs = document.getElementById('topNFTs');
+        if (nftsData.nfts && nftsData.nfts.length > 0) {
+            const top = nftsData.nfts.slice(0, 6); // Top 6
+            let html = '<div class="top-nfts-grid">';
+            
+            top.forEach(nft => {
+                const ownerShort = nft.owner.substring(0, 8) + '...' + nft.owner.substring(nft.owner.length - 6);
+                html += `
+                    <div class="top-nft">
+                        <div class="top-nft-header">
+                            <h4>${nft.name}</h4>
+                            <span class="top-nft-value">${nft.value} NN</span>
+                        </div>
+                        <div class="top-nft-body">
+                            <div class="top-nft-stat">
+                                <span>Owner:</span>
+                                <span class="owner-address">${ownerShort}</span>
+                            </div>
+                            <div class="top-nft-stat">
+                                <span>Intelligence:</span>
+                                <span>${nft.intelligence}</span>
+                            </div>
+                            <div class="top-nft-stat">
+                                <span>Difficulty:</span>
+                                <span>${nft.difficulty}</span>
+                            </div>
+                            <div class="coming-soon-badge">Coming Soon</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            topNFTs.innerHTML = html;
+        } else {
+            topNFTs.innerHTML = '<p class="text-muted">No NFTs in the network yet</p>';
+        }
+    } catch (error) {
+        console.error('Error loading marketplace data:', error);
+    }
+}
+</script>
+
+<style>
+.marketplace-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.info-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.info-card i {
+    font-size: 40px;
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.info-card h3 {
+    margin: 10px 0;
+    font-size: 20px;
+}
+
+.info-card p {
+    color: var(--gray);
+    line-height: 1.5;
+}
+
+.top-nfts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.top-nft {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.3s;
+}
+
+.top-nft:hover {
+    transform: translateY(-5px);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.top-nft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.top-nft-header h4 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.top-nft-value {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.top-nft-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.owner-address {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.coming-soon-badge {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(102, 126, 234, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--primary);
+}
+
+.feature-content h3 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+}
+
+.feature-content p {
+    margin: 0;
+    color: var(--gray);
+    font-size: 14px;
+}
+</style>
+{% endblock %}

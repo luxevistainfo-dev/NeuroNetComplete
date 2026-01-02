@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}NeuroNet - Wallet{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1><i class="fas fa-wallet"></i> My Wallet</h1>
+    
+    <div class="wallet-overview" id="walletOverview">
+        <!-- Wallet info will be loaded here -->
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2><i class="fas fa-coins"></i> Balance & Transactions</h2>
+        <div id="balanceInfo">
+            <div class="balance-display">
+                <span class="balance-label">Current Balance:</span>
+                <span class="balance-amount" id="currentBalance">0.00</span>
+            </div>
+        </div>
+        
+        <h3>Recent Transactions</h3>
+        <div id="transactionsList" class="transactions-list">
+            <!-- Transactions will be loaded here -->
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2><i class="fas fa-robot"></i> My NFTs</h2>
+        <div id="myNfts" class="nft-grid">
+            <!-- NFTs will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-cog"></i> Wallet Management</h2>
+    <div class="grid grid-3">
+        <button onclick="openWalletModal()" class="btn-secondary">
+            <i class="fas fa-exchange-alt"></i> Switch Wallet
+        </button>
+        <button onclick="exportWallet()" class="btn-secondary">
+            <i class="fas fa-download"></i> Export Wallet
+        </button>
+        <button onclick="clearWallet()" class="btn-danger">
+            <i class="fas fa-sign-out-alt"></i> Disconnect
+        </button>
+    </div>
+</div>
+
+<script>
+// Wallet page specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    loadWalletData();
+});
+
+async function loadWalletData() {
+    if (!currentWallet) {
+        document.getElementById('walletOverview').innerHTML = `
+            <div class="alert warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Wallet not connected. Please <a href="#" onclick="openWalletModal()">connect a wallet</a>.
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        // Load wallet info
+        const response = await fetch('/api/wallet-info');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update overview
+            document.getElementById('walletOverview').innerHTML = `
+                <div class="wallet-details">
+                    <div class="detail-row">
+                        <span>Address:</span>
+                        <code>${data.address}</code>
+                    </div>
+                    <div class="detail-row">
+                        <span>Balance:</span>
+                        <span class="balance-amount">${data.balance.toFixed(2)} NN</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>NFT Count:</span>
+                        <span>${data.nft_count}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Total NFT Value:</span>
+                        <span>${data.total_value.toFixed(2)} NN</span>
+                    </div>
+                </div>
+            `;
+            
+            // Update balance
+            document.getElementById('currentBalance').textContent = data.balance.toFixed(2) + ' NN';
+            
+            // Load NFTs
+            loadMyNFTs();
+        }
+    } catch (error) {
+        console.error('Error loading wallet data:', error);
+    }
+}
+
+async function loadMyNFTs() {
+    try {
+        const response = await fetch('/api/get-nfts');
+        const data = await response.json();
+        
+        const nftGrid = document.getElementById('myNfts');
+        nftGrid.innerHTML = '';
+        
+        if (data.nfts && data.nfts.length > 0) {
+            data.nfts.forEach(nft => {
+                const nftCard = createNFTCard(nft);
+                nftGrid.appendChild(nftCard);
+            });
+        } else {
+            nftGrid.innerHTML = `
+                <div class="alert info">
+                    <i class="fas fa-info-circle"></i>
+                    You don't have any NFTs yet. <a href="{{ url_for('mint_page') }}">Mint your first NFT!</a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading NFTs:', error);
+    }
+}
+
+function createNFTCard(nft) {
+    const div = document.createElement('div');
+    div.className = 'nft-card';
+    div.innerHTML = `
+        <div class="nft-header">
+            <h3>${nft.name}</h3>
+            <p>ID: ${nft.id.substring(0, 8)}...</p>
+        </div>
+        <div class="nft-body">
+            <div class="nft-attributes">
+                <div class="attribute">
+                    <span>Value:</span>
+                    <span>${nft.value.toFixed(2)} NN</span>
+                </div>
+                <div class="attribute">
+                    <span>Intelligence:</span>
+                    <span>${nft.intelligence.toFixed(2)}</span>
+                </div>
+                <div class="attribute">
+                    <span>Difficulty:</span>
+                    <span>${nft.difficulty.toFixed(2)}</span>
+                </div>
+                <div class="attribute">
+                    <span>Created:</span>
+                    <span>${formatTime(nft.created_at)}</span>
+                </div>
+            </div>
+            <div class="nft-actions">
+                <button onclick="trainNFT('${nft.id}')" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-robot"></i> Train
+                </button>
+            </div>
+        </div>
+    `;
+    return div;
+}
+
+async function trainNFT(nftId) {
+    const message = prompt("Enter a message to train your NFT:");
+    if (!message) return;
+    
+    try {
+        const response = await fetch('/api/train-nft', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nft_id: nftId,
+                message: message
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification(`NFT trained! Reward: ${data.reward} NN`, 'success');
+            loadWalletData(); // Refresh data
+        } else {
+            showNotification(data.error || 'Training failed', 'error');
+        }
+    } catch (error) {
+        showNotification('Error training NFT: ' + error.message, 'error');
+    }
+}
+
+function exportWallet() {
+    const savedWallet = localStorage.getItem('neuroWallet');
+    
+    if (savedWallet) {
+        const blob = new Blob([savedWallet], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'neuronet-wallet.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showNotification('Wallet exported successfully!', 'success');
+    } else {
+        showNotification('No wallet to export', 'warning');
+    }
+}
+
+function clearWallet() {
+    if (confirm('Are you sure you want to disconnect your wallet?')) {
+        localStorage.removeItem('neuroWallet');
+        currentWallet = null;
+        updateWalletStatus(null);
+        showNotification('Wallet disconnected', 'info');
+        loadWalletData(); // Refresh page
+    }
+}
+</script>
+{% endblock %}

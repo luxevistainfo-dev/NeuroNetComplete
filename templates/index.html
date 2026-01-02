@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h1><i class="fas fa-brain"></i> Welcome to NeuroNet</h1>
+        <p class="subtitle">The First AI Blockchain where NFTs learn and grow through conversation</p>
+        
+        <div class="hero-stats">
+            <div class="stat">
+                <div class="stat-value" id="totalNfts">0</div>
+                <div class="stat-label">AI NFTs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="blockHeight">0</div>
+                <div class="stat-label">Blocks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="networkIntelligence">0</div>
+                <div class="stat-label">Intelligence</div>
+            </div>
+        </div>
+        
+        <div class="hero-buttons">
+            <button class="btn btn-primary" onclick="openWalletModal()">
+                <i class="fas fa-wallet"></i> Connect Wallet
+            </button>
+            <a href="{{ url_for('mint_page') }}" class="btn btn-secondary">
+                <i class="fas fa-gem"></i> Mint Your First NFT
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="features">
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-robot"></i>
+        </div>
+        <h3>AI NFTs</h3>
+        <p>Each NFT contains a neural network that learns from your conversations</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-comments"></i>
+        </div>
+        <h3>Train via Chat</h3>
+        <p>Improve your NFT's intelligence by chatting with it</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-coins"></i>
+        </div>
+        <h3>Earn Rewards</h3>
+        <p>Get NN tokens for training and contributing to the network</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-link"></i>
+        </div>
+        <h3>Real Blockchain</h3>
+        <p>Powered by proof-of-work with adjustable difficulty</p>
+    </div>
+</div>
+
+<div class="content-grid">
+    <div class="card">
+        <h2><i class="fas fa-chart-line"></i> Network Status</h2>
+        <div class="network-stats">
+            <div class="stat-row">
+                <span>Difficulty:</span>
+                <span id="currentDifficulty">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Pending Transactions:</span>
+                <span id="pendingTx">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Mining Reward:</span>
+                <span id="miningReward">10 NN</span>
+            </div>
+            <div class="stat-row">
+                <span>Total Value:</span>
+                <span id="totalValue">0 NN</span>
+            </div>
+        </div>
+        <button id="startMiningBtn" class="btn btn-success" style="width: 100%; margin-top: 20px;">
+            <i class="fas fa-hammer"></i> Start Mining
+        </button>
+    </div>
+    
+    <div class="card">
+        <h2><i class="fas fa-bolt"></i> Quick Start</h2>
+        <div class="quick-start">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Create Wallet</h3>
+                    <p>Generate a secure wallet with private key</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Mint NFT</h3>
+                    <p>Create your first AI NFT with unique name</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Start Training</h3>
+                    <p>Chat with your NFT to increase its value</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Earn & Trade</h3>
+                    <p>Get rewards and trade on marketplace</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-history"></i> Recent Blocks</h2>
+    <div id="recentBlocks">
+        <p class="text-muted">Loading blockchain data...</p>
+    </div>
+</div>
+
+<script>
+// This script will be loaded from app.js
+</script>
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}NeuroNet - Mint NFT{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1><i class="fas fa-plus-circle"></i> Mint New AI NFT</h1>
+    <p class="lead">Create a unique AI NFT with built-in neural network that learns from interactions.</p>
+    
+    <div id="walletCheck" class="alert warning" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        Please <a href="#" onclick="openWalletModal()">connect a wallet</a> to mint NFTs.
+    </div>
+    
+    <div id="mintForm" style="display: none;">
+        <div class="grid grid-2">
+            <div>
+                <h3><i class="fas fa-cube"></i> NFT Details</h3>
+                <div class="form-group">
+                    <label for="nftName">NFT Name:</label>
+                    <input type="text" id="nftName" placeholder="Enter unique name (e.g., AlphaBrain, NeuralMaster)" maxlength="50">
+                    <small>Name your AI NFT (1-50 characters, letters, numbers, spaces, - and _ allowed)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nftDescription">Description (optional):</label>
+                    <textarea id="nftDescription" rows="3" placeholder="Describe your AI NFT's personality or purpose..."></textarea>
+                </div>
+                
+                <button onclick="mintNFT()" class="btn-primary">
+                    <i class="fas fa-magic"></i> Mint NFT
+                </button>
+            </div>
+            
+            <div>
+                <h3><i class="fas fa-info-circle"></i> NFT Preview</h3>
+                <div class="nft-preview">
+                    <div class="nft-preview-header">
+                        <h4 id="previewName">AI NFT Name</h4>
+                        <div class="nft-id">ID: <span id="previewId">New</span></div>
+                    </div>
+                    <div class="nft-preview-body">
+                        <div class="nft-attributes">
+                            <div class="attribute">
+                                <span>Owner:</span>
+                                <span id="previewOwner">Your Address</span>
+                            </div>
+                            <div class="attribute">
+                                <span>Value:</span>
+                                <span id="previewValue">1.00 NN</span>
+                            </div>
+                            <div class="attribute">
+                                <span>Intelligence:</span>
+                                <span id="previewIntelligence">1.00</span>
+                            </div>
+                            <div class="attribute">
+                                <span>Difficulty:</span>
+                                <span id="previewDifficulty">1.00</span>
+                            </div>
+                        </div>
+                        <div class="nft-description">
+                            <p id="previewDescription">Your AI NFT description will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mint-info">
+                    <h4><i class="fas fa-lightbulb"></i> Minting Info</h4>
+                    <ul>
+                        <li>Each NFT has a unique neural network</li>
+                        <li>Initial value: 1.00 NN tokens</li>
+                        <li>Can be trained through chat</li>
+                        <li>Increases in value with training</li>
+                        <li>Contributes to network intelligence</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-robot"></i> Your Existing NFTs</h2>
+    <div id="myExistingNfts" class="nft-grid">
+        <!-- Existing NFTs will be loaded here -->
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    checkWalletForMint();
+    updateNFTPreview();
+    
+    // Update preview as user types
+    document.getElementById('nftName').addEventListener('input', updateNFTPreview);
+    document.getElementById('nftDescription').addEventListener('input', updateNFTPreview);
+});
+
+function checkWalletForMint() {
+    const walletCheck = document.getElementById('walletCheck');
+    const mintForm = document.getElementById('mintForm');
+    
+    if (currentWallet) {
+        walletCheck.style.display = 'none';
+        mintForm.style.display = 'block';
+        loadExistingNFTs();
+    } else {
+        walletCheck.style.display = 'block';
+        mintForm.style.display = 'none';
+    }
+}
+
+function updateNFTPreview() {
+    const name = document.getElementById('nftName').value || 'AI NFT Name';
+    const description = document.getElementById('nftDescription').value || 'Your AI NFT description will appear here.';
+    const owner = currentWallet ? currentWallet.substring(0, 10) + '...' : 'Your Address';
+    
+    document.getElementById('previewName').textContent = name;
+    document.getElementById('previewDescription').textContent = description;
+    document.getElementById('previewOwner').textContent = owner;
+}
+
+async function mintNFT() {
+    const name = document.getElementById('nftName').value.trim();
+    const description = document.getElementById('nftDescription').value.trim();
+    
+    if (!name) {
+        showNotification('Please enter a name for your NFT', 'warning');
+        return;
+    }
+    
+    // Simple validation
+    if (name.length < 1 || name.length > 50) {
+        showNotification('Name must be between 1 and 50 characters', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/mint-nft', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification(`NFT "${name}" minted successfully!`, 'success');
+            
+            // Reset form
+            document.getElementById('nftName').value = '';
+            document.getElementById('nftDescription').value = '';
+            
+            // Update preview
+            updateNFTPreview();
+            
+            // Reload existing NFTs
+            loadExistingNFTs();
+            
+            // Update wallet info
+            fetchWalletInfo();
+        } else {
+            showNotification(data.error || 'Failed to mint NFT', 'error');
+        }
+    } catch (error) {
+        showNotification('Error minting NFT: ' + error.message, 'error');
+    }
+}
+
+async function loadExistingNFTs() {
+    if (!currentWallet) return;
+    
+    try {
+        const response = await fetch('/api/get-nfts');
+        const data = await response.json();
+        
+        const nftGrid = document.getElementById('myExistingNfts');
+        nftGrid.innerHTML = '';
+        
+        if (data.nfts && data.nfts.length > 0) {
+            data.nfts.forEach(nft => {
+                const nftCard = createNFTCard(nft);
+                nftGrid.appendChild(nftCard);
+            });
+        } else {
+            nftGrid.innerHTML = `
+                <div class="alert info" style="grid-column: 1 / -1;">
+                    <i class="fas fa-info-circle"></i>
+                    You don't have any NFTs yet. Mint your first one above!
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading NFTs:', error);
+    }
+}
+
+function createNFTCard(nft) {
+    const div = document.createElement('div');
+    div.className = 'nft-card';
+    div.innerHTML = `
+        <div class="nft-header">
+            <h3>${nft.name}</h3>
+            <p>ID: ${nft.id.substring(0, 8)}...</p>
+        </div>
+        <div class="nft-body">
+            <div class="nft-attributes">
+                <div class="attribute">
+                    <span>Value:</span>
+                    <span>${nft.value.toFixed(2)} NN</span>
+                </div>
+                <div class="attribute">
+                    <span>Intelligence:</span>
+                    <span>${nft.intelligence.toFixed(2)}</span>
+                </div>
+                <div class="attribute">
+                    <span>Difficulty:</span>
+                    <span>${nft.difficulty.toFixed(2)}</span>
+                </div>
+                <div class="attribute">
+                    <span>Created:</span>
+                    <span>${formatTime(nft.created_at)}</span>
+                </div>
+            </div>
+            <div class="nft-actions">
+                <a href="/train-page?nft=${nft.id}" class="btn-primary" style="width: 100%; margin-top: 10px; text-align: center; display: block;">
+                    <i class="fas fa-robot"></i> Train Now
+                </a>
+            </div>
+        </div>
+    `;
+    return div;
+}
+</script>
+
+<style>
+.nft-preview {
+    background: rgba(255,255,255,0.05);
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 2px dashed rgba(102, 126, 234, 0.5);
+}
+
+.nft-preview-header {
+    padding: 15px;
+    background: linear-gradient(45deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+}
+
+.nft-preview-body {
+    padding: 15px;
+}
+
+.nft-id {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 5px;
+}
+
+.nft-description {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-style: italic;
+    color: rgba(255,255,255,0.8);
+}
+
+.mint-info {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.mint-info ul {
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+.mint-info li {
+    margin-bottom: 8px;
+    color: rgba(255,255,255,0.8);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+}
+</style>
+{% endblock %}

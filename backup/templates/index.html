@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}NeuroNet - Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="card">
+        <h1><i class="fas fa-brain"></i> Welcome to NeuroNet</h1>
+        <p class="lead">A revolutionary blockchain network where NFTs are living AI entities that learn and grow through interaction.</p>
+        
+        <div class="cta-buttons">
+            <button onclick="openWalletModal()" class="btn-primary">
+                <i class="fas fa-wallet"></i> Connect Wallet
+            </button>
+            <a href="{{ url_for('mint_page') }}" class="btn-secondary">
+                <i class="fas fa-plus-circle"></i> Mint Your First NFT
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="stats-container">
+    <div class="stat-box">
+        <div class="stat-value" id="totalNfts">0</div>
+        <div class="stat-label">Total NFTs</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value" id="blockHeight">0</div>
+        <div class="stat-label">Blockchain Height</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value" id="totalIntelligence">0</div>
+        <div class="stat-label">Total Intelligence</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value" id="networkDifficulty">0</div>
+        <div class="stat-label">Network Difficulty</div>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2><i class="fas fa-robot"></i> How It Works</h2>
+        <div class="feature-list">
+            <div class="feature-item">
+                <i class="fas fa-cube"></i>
+                <div>
+                    <h3>Mint AI NFTs</h3>
+                    <p>Create unique NFTs with built-in neural networks</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-comments"></i>
+                <div>
+                    <h3>Train via Chat</h3>
+                    <p>Improve your NFT's intelligence through conversation</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-coins"></i>
+                <div>
+                    <h3>Earn Rewards</h3>
+                    <p>Get coins for training and network contributions</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-exchange-alt"></i>
+                <div>
+                    <h3>Trade & Sell</h3>
+                    <p>Buy, sell, and trade AI NFTs on the marketplace</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2><i class="fas fa-chart-line"></i> Network Activity</h2>
+        <canvas id="networkChart" height="200"></canvas>
+        <div class="recent-activity">
+            <h3>Recent Blocks</h3>
+            <div id="recentBlocks">
+                <!-- Blocks will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-question-circle"></i> Getting Started</h2>
+    <div class="grid grid-3">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Create Wallet</h3>
+            <p>Generate a new wallet or load existing one with private key</p>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Mint NFT</h3>
+            <p>Create your first AI NFT with a unique name</p>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Start Training</h3>
+            <p>Chat with your NFT to increase its intelligence and value</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
