@@ -1,0 +1,29 @@
+version: '3.7'
+services:
+  geth-node-1:
+    image: ethereum/client-go:stable
+    container_name: geth-node-1
+    volumes:
+      - ./geth/node1:/root/.ethereum
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+    command: ["--http", "--http.addr", "0.0.0.0", "--http.api", "eth,net,web3,personal", "--http.corsdomain", "*", "--syncmode", "full", "--networkid", "13337", "--mine", "--miner.threads=1", "--allow-insecure-unlock"]
+  geth-node-2:
+    image: ethereum/client-go:stable
+    container_name: geth-node-2
+    volumes:
+      - ./geth/node2:/root/.ethereum
+    ports:
+      - "8546:8545"
+      - "30304:30303"
+    command: ["--http", "--http.addr", "0.0.0.0", "--http.api", "eth,net,web3,personal", "--http.corsdomain", "*", "--syncmode", "full", "--networkid", "13337", "--allow-insecure-unlock", "--bootnodes", ""]
+  geth-node-3:
+    image: ethereum/client-go:stable
+    container_name: geth-node-3
+    volumes:
+      - ./geth/node3:/root/.ethereum
+    ports:
+      - "8547:8545"
+      - "30305:30303"
+    command: ["--http", "--http.addr", "0.0.0.0", "--http.api", "eth,net,web3,personal", "--http.corsdomain", "*", "--syncmode", "full", "--networkid", "13337", "--allow-insecure-unlock", "--bootnodes", ""]
