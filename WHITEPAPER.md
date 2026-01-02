@@ -1,39 +1,35 @@
-# NeuroNetComplete — Whitepaper (draft)
+NeuroNetComplete — Whitepaper (overview)
+=========================================
 
-## Abstract
-NeuroNetComplete is an independent blockchain-native ecology of AI agents (AI NFTs) that learn from user interactions, accrue measurable value, and participate in a native token economy. Each AI agent is minted as an NFT and references off-chain model checkpoints. The network supports mining-like reward issuance, staking, and a marketplace economy for AI agents.
+1. Introduction
+NeuroNetComplete is a modular full-stack platform for training, evaluating, and serving neural models. It integrates standard components (data storage, model training, model serving, monitoring) into a reproducible, containerized workflow.
 
-## Motivation and Background
-Just as Bitcoin introduced programmable scarcity and decentralized consensus for value transfer, NeuroNetComplete aims to establish decentralized provenance and economic incentives for AI agents — allowing ownership, trade, and verifiable lineage of trained models.
+2. Architecture
+- Data Layer: PostgreSQL stores metadata, experiment records, and user data. Large binary artifacts (datasets, models) should be stored in object storage (S3/MinIO) and referenced by the DB.
+- Queue & Cache: Redis is used as a broker for background workers and for caching frequently accessed results.
+- API Layer: A lightweight HTTP API (FastAPI) exposes model endpoints, experiment controls, and job submission API.
+- Worker Layer: Background workers handle long-running tasks (training, evaluation, scheduled jobs). Celery or RQ are recommended.
+- Frontend: Reactive SPA that interacts with the API to display datasets, experiments, and model metrics.
 
-## Components
-1. Network: Permissioned or independent EVM-compatible chain (private geth or custom chain).
-2. Tokens:
-   - ERC-20 (NUT / NeuroToken) — native rewards and medium of exchange.
-   - ERC-721 (NeuroAIAgent) — unique AI NFT representing an assistant and pointer to off-chain checkpoints.
-3. Mining: Demonstration PoW for reward issuance in early network; adjustable difficulty and emission schedule. For production, consensus-level design is expected (validator-based or hybrid).
-4. Off-chain training: Models are trained off-chain (federated or centralized workers). Checkpoints are pinned to IPFS/Arweave and anchored on-chain by hashes.
-5. Staking: Participants stake tokens to gain weight in aggregation and reduce Sybil attacks.
+3. Dataflow
+1. User uploads dataset (frontend -> API -> object storage)
+2. User creates a training job (API records job in DB and enqueues task in Redis)
+3. Worker pulls job from Redis, fetches data from object store, runs training, stores model artifacts back to object store and updates DB
+4. API serves model metadata and can proxy requests to model serving endpoints (or the worker can register model endpoints dynamically)
 
-## Tokenomics (example)
-- Initial supply: minted to governance/deployer.
-- Reward emission: per solved on-chain work (PoW demo) or governance-distributed reward pool.
-- Fees: marketplace fees and staking penalties feed the reward pool.
+4. Models and reproducibility
+- Each training run should record required metadata: code commit hash, environment (Docker image tags), hyperparameters, dataset version, random seed, and hardware specs.
+- Recommended to store metric summaries and model evaluation artifacts alongside models in the object store.
 
-## Security & Anti‑abuse
-- Do not accept model updates without validation, weighting, or stake requirements to mitigate poisoning.
-- Use signatures, multisig, and hardware-signer flows for governance and critical actions.
-- Audit smart contracts before mainnet deployment.
+5. Security and privacy
+- Use TLS for all production-facing services (terminate TLS at a reverse proxy or load balancer). Do not expose management interfaces (e.g., databases, redis, pgadmin) to the public internet in production.
+- Encrypt secrets at rest using an external secrets manager in production (Vault, AWS Secrets Manager, etc.).
+- Apply RBAC and audit logging for sensitive operations.
 
-## Roadmap
-- Phase 0: Prototype: private network, ERC-20/ERC-721, basic mint & marketplace, ML worker prototype.
-- Phase 1: Permissioned network with validator set and real reward mechanics.
-- Phase 2: Open network and cross-chain bridges, audited contracts, production ML infra.
+6. Scaling and operations
+- Stateless services (API, frontend) can be scaled horizontally behind a load balancer.
+- Database should be run in a managed service or clustered for production workloads.
+- Use a job queue and autoscaling for worker fleets to handle variable training loads.
 
-## Conclusion
-NeuroNetComplete proposes a new primitive: tradable, evolving AI agents whose value is tied to verifiable training lineage and a tokenized economy. This whitepaper is a draft and roadmap for implementation, security evaluation, and community governance.
-
-
----
-
-Commit these files to the repo and return success/failure with any error output.
+7. Conclusion
+NeuroNetComplete provides a starting point for teams building ML platforms with an emphasis on reproducibility, modularity, and operational best practices. Use the provided docker-compose stack for local testing and iterate toward production with managed services and hardened security.

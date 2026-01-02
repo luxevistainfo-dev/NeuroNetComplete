@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neuronet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neuronetpass}
+      POSTGRES_DB: ${POSTGRES_DB:-neuronetdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:7
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+  redis:
+    image: redis:6-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    image: luxevistainfo/neuronet-api:latest
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neuronet}:${POSTGRES_PASSWORD:-neuronetpass}@postgres:5432/${POSTGRES_DB:-neuronetdb}
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: luxevistainfo/neuronet-worker:latest
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neuronet}:${POSTGRES_PASSWORD:-neuronetpass}@postgres:5432/${POSTGRES_DB:-neuronetdb}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - backend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: luxevistainfo/neuronet-frontend:latest
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend
+      - backend
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend_build:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+    networks:
+      - frontend
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  postgres_data:
+  redis_data:
+  frontend_build:
